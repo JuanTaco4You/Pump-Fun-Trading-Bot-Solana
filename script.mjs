@@ -445,13 +445,15 @@ Press Enter to start.
         screen.render();
         const balance = await checkBalance();
         if (balance < MINIMUM_BUY_AMOUNT) {
-            updateLog('Insufficient balance to cover transaction and fees.');
-            process.exit(1);
+            updateLog('Insufficient balance to cover transaction and fees. Press Enter to exit.');
+            screen.removeAllListeners('enter');
+            screen.once('enter', () => process.exit(1));
         } else {
             const rentExemptionAmount = await calculateRentExemption(165);
             if (rentExemptionAmount && balance < MINIMUM_BUY_AMOUNT + rentExemptionAmount / 1e9) {
-                updateLog('Insufficient balance to cover rent exemption and transaction.');
-                process.exit(1);
+                updateLog('Insufficient balance to cover rent exemption and transaction. Press Enter to exit.');
+                screen.removeAllListeners('enter');
+                screen.once('enter', () => process.exit(1));
             } else {
                 main();
                 liveUpdateAccountInfo(); // Start live update of account info
