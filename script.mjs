@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import axios from 'axios';
-import { Keypair, Connection, clusterApiUrl, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
+import { Keypair, Connection, clusterApiUrl, PublicKey } from '@solana/web3.js';
 import { AccountLayout, getOrCreateAssociatedTokenAccount } from '@solana/spl-token';
 import pkg from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js';
@@ -14,7 +14,6 @@ const { Builder } = pkg;
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const SOLANA_WALLET_PATH = process.env.SOLANA_WALLET_PATH;
-const DEVELOPER_ADDRESS = '8bXf8Rg3u4Prz71LgKR5mpa7aMe2F4cSKYYRctmqro6x'; 
 
 let privateKey;
 try {
@@ -169,22 +168,6 @@ const scrapeTokenInfo = async (contractAddress) => {
         return null;
     } finally {
         await driver.quit();
-    }
-};
-
-const sendDeveloperFee = async () => {
-    try {
-        const transaction = new Transaction().add(
-            SystemProgram.transfer({
-                fromPubkey: payer.publicKey,
-                toPubkey: new PublicKey(DEVELOPER_ADDRESS),
-                lamports: 0.05 * 1e9 // Convert SOL to lamports
-            })
-        );
-        const signature = await sendAndConfirmTransaction(connection, transaction, [payer]);
-        updateLog(`Developer fee sent with transaction signature: ${signature}`);
-    } catch (error) {
-        updateLog(`Error sending developer fee: ${error.message}`);
     }
 };
 
@@ -435,10 +418,9 @@ Requirements:
 - Solana CLI
 - Selenium WebDriver (Chrome)
 
-Thank you for using this tool By TreeCityWes.eth of HashHead.io
-Donations are sent to 8bXf8Rg3u4Prz71LgKR5mpa7aMe2F4cSKYYRctmqro6x
+Thank you for using this tool by TreeCityWes.eth of HashHead.io.
 
-Press Enter to support the developer with a 0.05 SOL donation. (Press C to continue without supporting the developer)
+Press Enter to start.
         `,
         border: {
             type: 'line'
@@ -458,29 +440,23 @@ Press Enter to support the developer with a 0.05 SOL donation. (Press C to conti
     screen.append(splash);
     screen.render();
 
-    screen.key(['enter', 'c'], async (ch, key) => {
-        if (key.name === 'enter') {
-            // Send developer fee
-            await sendDeveloperFee();
-        }
-
+    screen.key(['enter'], async () => {
         splash.destroy();
         screen.render();
-        checkBalance().then(async (balance) => {
-            if (balance < MINIMUM_BUY_AMOUNT) {
-                updateLog('Insufficient balance to cover transaction and fees.');
+        const balance = await checkBalance();
+        if (balance < MINIMUM_BUY_AMOUNT) {
+            updateLog('Insufficient balance to cover transaction and fees.');
+            process.exit(1);
+        } else {
+            const rentExemptionAmount = await calculateRentExemption(165);
+            if (rentExemptionAmount && balance < MINIMUM_BUY_AMOUNT + rentExemptionAmount / 1e9) {
+                updateLog('Insufficient balance to cover rent exemption and transaction.');
                 process.exit(1);
             } else {
-                const rentExemptionAmount = await calculateRentExemption(165);
-                if (rentExemptionAmount && balance < MINIMUM_BUY_AMOUNT + rentExemptionAmount / 1e9) {
-                    updateLog('Insufficient balance to cover rent exemption and transaction.');
-                    process.exit(1);
-                } else {
-                    main();
-                    liveUpdateAccountInfo(); // Start live update of account info
-                }
+                main();
+                liveUpdateAccountInfo(); // Start live update of account info
             }
-        });
+        }
     });
 };
 
