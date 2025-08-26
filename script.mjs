@@ -9,6 +9,10 @@ import bs58 from 'bs58';
 import blessed from 'blessed';
 import contrib from 'blessed-contrib';
 
+const logFilePath = process.env.LOG_FILE || 'trading-bot.log';
+const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+process.on('exit', () => logStream.end());
+
 const { Builder } = pkg;
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -81,7 +85,9 @@ let continueTrade = false;
 let sellImmediately = false;
 
 const updateLog = (message) => {
-    logBox.insertBottom(message);
+    const timestampedMessage = `[${new Date().toISOString()}] ${message}`;
+    logBox.insertBottom(timestampedMessage);
+    logStream.write(`${timestampedMessage}\n`);
     logBox.setScrollPerc(100);
     screen.render();
 };
